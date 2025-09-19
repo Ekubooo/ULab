@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using UnityEngine;
 
-public class Graph : MonoBehaviour
+public class Graph3D : MonoBehaviour
 {
     [SerializeField]
     Transform pointPrefab;
@@ -11,7 +11,7 @@ public class Graph : MonoBehaviour
     int resolution = 10;
     
     [SerializeField]
-    FuncLib.FuncName func;
+    FuncLib3D.FuncName func;
 
     Transform[] points;
 
@@ -21,13 +21,19 @@ public class Graph : MonoBehaviour
         var scale = Vector3.one * step;
         var position = Vector3.zero;
         
-        points = new Transform[resolution];
+        points = new Transform[resolution * resolution];
         
-        for (int i = 0; i < points.Length; i++)
+        for (int i = 0, x = 0, z = 0; i < points.Length; i++, x++)
         {
             Transform point = points[i] = Instantiate(pointPrefab);
+            if (x == resolution)
+            {
+                x = 0;
+                z += 1;
+            }
             
-            position.x = (i + 0.5f) * step - 1f;
+            position.x = (x + 0.5f) * step - 1f;
+            position.z = (z + 0.5f) * step - 1f;
             point.localPosition = position;
             point.localScale = scale;
             point.SetParent(transform, false);
@@ -37,7 +43,8 @@ public class Graph : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        FuncLib.Func f = FuncLib.GetFunc2(func);
+        // FuncLib.Func f = FuncLib.GetFunc2(func);
+        FuncLib3D.Func f = FuncLib3D.GetFunc(func);
         float time = Time.time;
         for (int i = 0; i < points.Length; i++)
         {
@@ -46,7 +53,7 @@ public class Graph : MonoBehaviour
             // position.y = position.x * position.x * position.x;
             // position.y = Mathf.Sin(Mathf.PI *  (position.x + time));
             
-            position.y = f(position.x, time);
+            position.y = f(position.x, position.z, time);
             point.localPosition = position;
         }
     }

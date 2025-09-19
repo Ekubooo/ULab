@@ -22,7 +22,7 @@ Shader "Custom/Point surface"
 
         void ConfigureSurface(Input input, inout SurfaceOutputStandard surface)
         {
-            surface.Albedo.rg = input.worldPos.xy * 0.5 + 0.5;
+            surface.Albedo = saturate(input.worldPos * 0.5 + 0.5);
             surface.Smoothness = 0.5;
         }
         

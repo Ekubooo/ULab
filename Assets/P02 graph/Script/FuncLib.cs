@@ -11,7 +11,8 @@ public static class FuncLib
     {
         return _funcs[(int)name];
     }
-
+    
+    /*
     public static Func GetFunc(int index)
     {
         switch (index)
@@ -29,7 +30,7 @@ public static class FuncLib
                 break;
         }
         return null;
-    }
+    }*/
     
     // not for object template, though useing static
     public static float Wave(float x, float t)
