@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Point Surface
-  m_Shader: {fileID: 4800000, guid: 3a9cd0f9f6a17a747a4b5ad94c1ecf97, type: 3}
+  m_Shader: {fileID: -6465566751694194690, guid: ab4c897eab070ee418bc3b1f95439149, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -84,7 +84,7 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _QueueControl: -1
+    - _QueueControl: 0
     - _QueueOffset: 0
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0

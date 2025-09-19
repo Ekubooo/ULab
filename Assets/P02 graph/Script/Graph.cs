@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using UnityEngine;
 
 public class Graph : MonoBehaviour
@@ -7,6 +9,9 @@ public class Graph : MonoBehaviour
     
     [SerializeField, Range(10, 100)]
     int resolution = 10;
+    
+    [SerializeField]
+    FuncLib.FuncName func;
 
     Transform[] points;
 
@@ -38,13 +43,16 @@ public class Graph : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        FuncLib.Func f = FuncLib.GetFunc2(func);
         float time = Time.time;
         for (int i = 0; i < points.Length; i++)
         {
             Transform point = points[i];
             Vector3 position = point.localPosition;
             // position.y = position.x * position.x * position.x;
-            position.y = Mathf.Sin(Mathf.PI *  (position.x + time));
+            // position.y = Mathf.Sin(Mathf.PI *  (position.x + time));
+            
+            position.y = f(position.x, time);
             point.localPosition = position;
         }
     }
