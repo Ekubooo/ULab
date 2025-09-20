@@ -5,11 +5,22 @@ public static class FuncLibXD
     public delegate Vector3 Func(float x, float z, float t);
     public enum FuncName{Wave, MultiWave, CrossWave, Ripple, Sphere, Tours, Tours2, ToursR}
 
-    static Func[] _funcs = {Wave, MultiWave, CrossWave, Ripple, Sphere, Tours,  Tours2,  ToursR};
+    static Func[] _funcs = {Wave, MultiWave, CrossWave, Ripple, Sphere, Tours,  Tours2, ToursR};
 
     public static Func GetFunc(FuncName name)
     {
         return _funcs[(int)name];
+    }
+    
+    public static FuncName GetNextFuncName(FuncName name)
+    {
+        return (int)name < _funcs.Length - 1 ? name + 1 : 0;
+    }
+    
+    public static FuncName GetRandomFunctionNameOtherThan (FuncName name) 
+    {
+        var choice = (FuncName)Random.Range(1, _funcs.Length);
+        return choice == name ? 0 : choice;
     }
     
     // not for object template, though useing static
@@ -103,5 +114,13 @@ public static class FuncLibXD
         p.z = s * Cos(PI * u);
         return p;
     }
+
+    public static Vector3 Morph
+        (float u, float v, float t, Func form, Func to, float progress)
+    {
+        // return Vector3.Lerp(form(u, v, t), to(u, v, t), SmoothStep(0f, 1f, progress));
+        return Vector3.LerpUnclamped(form(u, v, t), to(u, v, t), SmoothStep(0f, 1f, progress));
+    }
+    
 }
 
