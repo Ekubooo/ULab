@@ -25,6 +25,7 @@ Shader "Custom/PSurface GPU"
 
         void ConfigureProcedural ()
         {
+            // please use _Pos instead of _Position (same as script defined)
             #if defined(UNITY_PROCEDURAL_INSTANCING_ENABLED)
 				float3 position = _Pos[unity_InstanceID];
                 unity_ObjectToWorld = 0.0;
