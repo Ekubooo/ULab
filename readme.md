@@ -1,2 +1,2 @@
 ## todo
-- surface shader to VF shader
+- dynamic resolution of Tours and Sphere surface

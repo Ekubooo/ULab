@@ -350,9 +350,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 31771148340d4a7f9abec10104f7502b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolution: 200
+  resolution: 500
+  transProgress: 4.9
   func: 0
-  func2: 0
+  func2: 4
   transitionMode: 0
   funcDuration: 1
   transitionDuration: 1

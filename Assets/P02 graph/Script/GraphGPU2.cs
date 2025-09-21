@@ -6,7 +6,7 @@ public class GraphGPU2 : MonoBehaviour
 {
     const int maxResolution = 700;
     [SerializeField, Range(10, maxResolution)] int resolution = 200;
-    [SerializeField, Range(0.0f,5.0f)] float transProgress = 1.0f;
+    [SerializeField, Range(0.1f,4.9f)] float transProgress = 1.0f;
     
     [SerializeField] FuncLibXD.FuncName func;
     [SerializeField] FuncLibXD.CSFuncName func2;
@@ -23,12 +23,14 @@ public class GraphGPU2 : MonoBehaviour
     
     ComputeBuffer posBuffer;
     [SerializeField] ComputeShader _cs;
-    
-    static readonly int
+
+    private static readonly int
         positionsId = Shader.PropertyToID("_Pos"),
         resolutionId = Shader.PropertyToID("_Res"),
         stepId = Shader.PropertyToID("_Step"),
-        timeId = Shader.PropertyToID("_Time");
+        timeId = Shader.PropertyToID("_Time"),
+        progressId = Shader.PropertyToID("_Progress"),
+        transPId = Shader.PropertyToID("_TransP");
     
     [SerializeField] Material material;
     [SerializeField] Mesh mesh;
@@ -78,6 +80,8 @@ public class GraphGPU2 : MonoBehaviour
         _cs.SetInt(resolutionId, resolution);
         _cs.SetFloat(stepId, step);
         _cs.SetFloat(timeId, Time.time);
+        _cs.SetFloat(progressId, transProgress);    // unfinished
+        
         
         var FuncIndex = (int)func2;
         _cs.SetBuffer(FuncIndex, positionsId, posBuffer);
