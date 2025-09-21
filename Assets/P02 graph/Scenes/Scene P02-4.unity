@@ -352,6 +352,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   resolution: 200
   func: 0
+  func2: 0
   transitionMode: 0
   funcDuration: 1
   transitionDuration: 1

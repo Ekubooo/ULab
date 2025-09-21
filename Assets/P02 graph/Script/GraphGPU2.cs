@@ -4,10 +4,12 @@ using UnityEngine;
 
 public class GraphGPU2 : MonoBehaviour
 {
-    // const int maxResolution = 1000;
-    [SerializeField, Range(10, 500)] int resolution = 200;
+    const int maxResolution = 700;
+    [SerializeField, Range(10, maxResolution)] int resolution = 200;
+    [SerializeField, Range(0.0f,5.0f)] float transProgress = 1.0f;
     
     [SerializeField] FuncLibXD.FuncName func;
+    [SerializeField] FuncLibXD.CSFuncName func2;
     
     public enum TransitionMode { Cycle, Random }
     [SerializeField] TransitionMode transitionMode;
@@ -33,7 +35,7 @@ public class GraphGPU2 : MonoBehaviour
     
     void OnEnable()
     {
-        posBuffer = new ComputeBuffer(resolution * resolution, 3 * 4);    
+        posBuffer = new ComputeBuffer(maxResolution * maxResolution, 3 * 4);    
     }
 
     void OnDisable()
@@ -77,17 +79,18 @@ public class GraphGPU2 : MonoBehaviour
         _cs.SetFloat(stepId, step);
         _cs.SetFloat(timeId, Time.time);
         
-        _cs.SetBuffer(0, positionsId, posBuffer);
+        var FuncIndex = (int)func2;
+        _cs.SetBuffer(FuncIndex, positionsId, posBuffer);
         
         int groups = Mathf.CeilToInt(resolution / 8f);
-        _cs.Dispatch(0, groups, groups, 1);
+        _cs.Dispatch(FuncIndex, groups, groups, 1);
         
         material.SetBuffer(positionsId, posBuffer);
         material.SetFloat(stepId, step);
         
         var bounds = new Bounds(Vector3.zero, Vector3.one * (2f + 2f / resolution));
         Graphics.DrawMeshInstancedProcedural
-            (mesh, 0, material, bounds, posBuffer.count);
+            (mesh, 0, material, bounds, resolution* resolution);
         
     }
     
