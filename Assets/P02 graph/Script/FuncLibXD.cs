@@ -2,7 +2,7 @@ using UnityEngine;
 using static UnityEngine.Mathf;
 public static class FuncLibXD
 {
-    public enum CSFuncName{Wave, MultiWave ,Ripple, Sphere, Tours, ToursA}
+    public enum CSFuncName{Wave, MultiWave ,Ripple, Sphere, Tours, ToursA, ToursTT, SphereTT}
     public delegate Vector3 Func(float x, float z, float t);
     public enum FuncName{Wave, MultiWave, CrossWave, Ripple, Sphere, Tours, Tours2, ToursR}
 
