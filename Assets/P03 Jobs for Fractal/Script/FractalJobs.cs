@@ -1,8 +1,16 @@
 using System;
-using Unity.VisualScripting;
 using UnityEngine;
+using Unity.VisualScripting;
 
-public class Fractal3 : MonoBehaviour
+using Unity.Burst;
+using Unity.Jobs;
+using Unity.Mathematics;
+using Unity.Collections;
+
+using static Unity.Mathematics.math;
+using quaternion = Unity.Mathematics.quaternion;
+
+public class FractalJobs : MonoBehaviour
 {
     [SerializeField, Range(1, 8)] int depth = 4;
     [SerializeField] Mesh mesh;
@@ -51,9 +59,9 @@ public class Fractal3 : MonoBehaviour
         for (int li = 1; li < parts.Length; li++)
         {
             FractalPart[] levelParts = parts[li];
-            for (int fpi = 0; fpi < levelParts.Length; fpi += 5)
-                for (int ci = 0; ci < 5; ci++)
-                    levelParts[fpi + ci] =  CreatePart(ci);
+            for (int fpi = 0; fpi < levelParts.Length; fpi+=5)
+            for (int ci = 0; ci < 5; ci++)
+                levelParts[fpi + ci] =  CreatePart(ci);
         }
     }
 
