@@ -162,12 +162,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 187218644}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4ca50c928e3bfc47a84cd9f7175b511, type: 3}
+  m_Script: {fileID: 11500000, guid: 29242cc139722fd499e66b31f2d71bbe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  depth: 3
+  depth: 6
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: 6b56c638f3105714cb8e8a033739aa14, type: 2}
 --- !u!114 &187218650
@@ -177,12 +177,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 187218644}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 29242cc139722fd499e66b31f2d71bbe, type: 3}
+  m_Script: {fileID: 11500000, guid: 85ec00b972c4fa847a67513390580bda, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  depth: 3
+  depth: 6
   mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   material: {fileID: 2100000, guid: 6b56c638f3105714cb8e8a033739aa14, type: 2}
 --- !u!1 &782032431

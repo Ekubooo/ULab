@@ -1,4 +1,3 @@
-using System;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -7,11 +6,8 @@ public class Fractal3 : MonoBehaviour
     [SerializeField, Range(1, 8)] int depth = 4;
     [SerializeField] Mesh mesh;
     [SerializeField] Material material;
-    
-    static readonly int matrixsID = Shader.PropertyToID("_Matrixs");
-    static MaterialPropertyBlock propertyBlock;
     static Vector3[] _directions = 
-        {Vector3.up, Vector3.right, Vector3.left, Vector3.forward, Vector3.back};
+        {Vector3.up, Vector3.right, Vector3.left, Vector3.forward, Vector3.back };
 
     static Quaternion[] _rotations =
         {
@@ -23,107 +19,109 @@ public class Fractal3 : MonoBehaviour
     struct FractalPart
     {
         public Vector3 direction, worldPosition;
-        public Quaternion rotation,  worldRotation;
+        public Quaternion rotation, worldRotation;
         public float spinAngle;
     }
+    
+    static readonly int matricesId = Shader.PropertyToID("_Matrices");
+    static MaterialPropertyBlock propertyBlock;
+    
+    FractalPart[][] parts;
+    Matrix4x4[][] matrices;
+    
     FractalPart CreatePart(int childIndex) => new FractalPart
         { direction = _directions[childIndex], rotation = _rotations[childIndex]};
     
-    FractalPart[][] parts;
-    Matrix4x4[][] matrixs;
-
-    ComputeBuffer[] MatrixBuffers;
+    ComputeBuffer[] matricesBuffers;
     
     void OnEnable()
     {
         parts = new FractalPart[depth][];
-        matrixs = new Matrix4x4[depth][];
-        MatrixBuffers = new ComputeBuffer[depth];
-        int stride = 16 * 4;
+        matrices = new Matrix4x4[depth][];
+        matricesBuffers = new ComputeBuffer[depth];
+
+        int stride = 16 * 4; 
         for (int i = 0, length = 1; i < parts.Length; i++,  length *= 5)
         {
             parts[i] = new FractalPart[length]; 
-            matrixs[i] = new Matrix4x4[length];
-            MatrixBuffers[i] = new ComputeBuffer(length, stride);
+            matrices[i] = new Matrix4x4[length];
+            matricesBuffers[i] = new ComputeBuffer(length, stride);
         }
 
         parts[0][0] =  CreatePart(0);
         for (int li = 1; li < parts.Length; li++)
         {
             FractalPart[] levelParts = parts[li];
-            for (int fpi = 0; fpi < levelParts.Length; fpi += 5)
+            for (int fpi = 0; fpi < levelParts.Length; fpi+=5)
                 for (int ci = 0; ci < 5; ci++)
                     levelParts[fpi + ci] =  CreatePart(ci);
         }
+        propertyBlock ??= new MaterialPropertyBlock();
     }
 
     void OnDisable()
     {
-        for (int i = 0; i < MatrixBuffers.Length; i++)
+        for (int i = 0; i < matricesBuffers.Length; i++)
         {
-            MatrixBuffers[i].Release();
-            parts = null;
-            matrixs = null;
-            MatrixBuffers = null;
-            propertyBlock ??= new MaterialPropertyBlock();
+            matricesBuffers[i].Release();
         }
+        parts = null;
+        matrices = null;
+        matricesBuffers = null;
     }
 
     void OnValidate()
-    {   // hot reloads change supported
-        if (parts!= null&enabled)
+    {
+        if (parts != null && enabled)
         {
             OnDisable();
             OnEnable();
         }
     }
-
+    
     void Update()
     {
-        // Quaternion deltaRotation = Quaternion.Euler(0f, 22.5f * Time.deltaTime, 0f);
         float spinAngleDelta = 22.5f * Time.deltaTime;
         FractalPart rootPart = parts[0][0];
         rootPart.spinAngle += spinAngleDelta;
-        rootPart.worldRotation = transform.rotation * 
-            (rootPart.rotation * Quaternion.Euler(0f, rootPart.spinAngle, 0f));
-        rootPart.worldPosition = transform.position;
+        rootPart.worldRotation = rootPart.rotation 
+            * Quaternion.Euler(0f, rootPart.spinAngle, 0f);
         
-        float objScale = transform.lossyScale.x;
         parts[0][0] = rootPart;
-        matrixs[0][0] = Matrix4x4.TRS
-            (rootPart.worldPosition, rootPart.worldRotation, objScale * Vector3.one);
+        matrices[0][0] = Matrix4x4.TRS
+            (rootPart.worldPosition, rootPart.worldRotation, Vector3.one);
 
-        float scale = objScale;
+        float scale = 1f;
         for (int li = 1; li < parts.Length; li++)
         {
             scale *= 0.5f;
             FractalPart[] parentParts = parts[li - 1];
             FractalPart[] levelParts  = parts[li];
-            Matrix4x4[] levelMatrixs = matrixs[li];
+            Matrix4x4[] levelMatrices = matrices[li];
+            
             for (int fpi = 0; fpi < levelParts.Length; fpi++)
             {
                 FractalPart parent = parentParts[fpi / 5];
                 FractalPart part = levelParts[fpi];
-
+                
                 part.spinAngle += spinAngleDelta;
-                // careful with the sequence of the Quaternion:
-                // Q1 * Q1 means Q2 Rotation first and Q1 after.
-                // child rotation first and parent after.
-                part.worldRotation = parent.worldRotation 
+                part.worldRotation = parent.worldRotation
                     * (part.rotation * Quaternion.Euler(0f, part.spinAngle, 0f));
-                part.worldPosition = parent.worldPosition + 
-                    parent.worldRotation * (1.25f * scale * part.direction);
+                part.worldPosition = parent.worldPosition +
+                    parent.worldRotation * (1.5f * scale * part.direction);
+                
                 levelParts[fpi] = part;
-                levelMatrixs[fpi] = Matrix4x4.TRS
-                    (rootPart.worldPosition, rootPart.worldRotation, scale * Vector3.one);
+                levelMatrices[fpi] = Matrix4x4.TRS
+                    (part.worldPosition, part.worldRotation, scale * Vector3.one);
             }
         }
-        var bounds = new Bounds(rootPart.worldPosition, 3f * objScale * Vector3.one);
-        for (int i = 0; i < MatrixBuffers.Length; i++)
+
+        var bounds = new Bounds(Vector3.zero, 3f * Vector3.one);
+        for (int i = 0; i < matricesBuffers.Length; i++)
         {
-            ComputeBuffer buffer = MatrixBuffers[i];
-            buffer.SetData(matrixs[i]);
-            propertyBlock.SetBuffer(matrixsID, buffer);
+            ComputeBuffer buffer = matricesBuffers[i];
+            buffer.SetData(matrices[i]);
+            propertyBlock.SetBuffer(matricesId, buffer);
             Graphics.DrawMeshInstancedProcedural
                 (mesh, 0, material, bounds, buffer.count, propertyBlock);
         }

@@ -1,7 +1,7 @@
 using Unity.VisualScripting;
 using UnityEngine;
 
-public class Fractal2mod : MonoBehaviour
+public class Fractal2shell : MonoBehaviour
 {
     [SerializeField, Range(1, 8)] int depth = 4;
     [SerializeField] Mesh mesh;
