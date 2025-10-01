@@ -36,6 +36,6 @@ public class Fractal : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // transform.Rotate(0f, 22.5f * Time.deltaTime, 0f);
+        transform.Rotate(0f, 22.5f * Time.deltaTime, 0f);
     }
 }
