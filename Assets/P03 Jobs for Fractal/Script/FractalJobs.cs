@@ -1,137 +1,158 @@
-using System;
-using UnityEngine;
-using Unity.VisualScripting;
-
 using Unity.Burst;
+using Unity.Collections;
 using Unity.Jobs;
 using Unity.Mathematics;
-using Unity.Collections;
+
+using Unity.VisualScripting;
+using UnityEngine;
 
 using static Unity.Mathematics.math;
+using float4x4 = Unity.Mathematics.float4x4;
 using quaternion = Unity.Mathematics.quaternion;
 
 public class FractalJobs : MonoBehaviour
 {
-    [SerializeField, Range(1, 8)] int depth = 4;
+    // Interface of "Job", using in the FOR loop
+    [BurstCompile(CompileSynchronously = true)] 
+    struct UpdateFractalLevelJob : IJobFor
+    {   
+        public float spinAngleDelta;
+        public float scale;
+        
+        public NativeArray<FractalPart> parts;
+        [ReadOnly] public NativeArray<FractalPart>  parents;
+        [WriteOnly]public NativeArray<float4x4>    matrices;
+        public void Execute(int i)
+        {   // replace the innermost loop of update()
+            FractalPart parent = parents[i / 5];
+            FractalPart part = parts[i];
+                
+            part.spinAngle += spinAngleDelta;
+            part.worldRotation = 
+                mul(parent.worldRotation, mul(part.rotation, quaternion.RotateY(part.spinAngle)));
+            part.worldPosition = parent.worldPosition +
+                mul(parent.worldRotation , 1.5f * scale * part.direction);
+                
+            parts[i] = part;
+            matrices[i] = float4x4.TRS
+                (part.worldPosition, part.worldRotation, float3(scale));
+        }
+    }
+
+    [SerializeField, Range(1, 9)] int depth = 6;
     [SerializeField] Mesh mesh;
     [SerializeField] Material material;
-    
-    static readonly int matrixsID = Shader.PropertyToID("_Matrixs");
-    static MaterialPropertyBlock propertyBlock;
-    static Vector3[] _directions = 
-        {Vector3.up, Vector3.right, Vector3.left, Vector3.forward, Vector3.back};
+    static float3[] _directions = {up(), right(), left(), forward(), back()};
 
-    static Quaternion[] _rotations =
+    static quaternion[] _rotations =
         {
-            Quaternion.identity, 
-            Quaternion.Euler(0f, 0f, -90f), Quaternion.Euler(0f, 0f, 90f), 
-            Quaternion.Euler(90f, 0f, 0f),  Quaternion.Euler(-90f, 0f, 0f),
+            quaternion.identity, 
+            quaternion.RotateZ(-0.5f * PI), quaternion.RotateZ(0.5f * PI), 
+            quaternion.RotateX(0.5f * PI),  quaternion.RotateX(-0.5f * PI),
         };
 
     struct FractalPart
     {
-        public Vector3 direction, worldPosition;
-        public Quaternion rotation,  worldRotation;
+        public float3 direction, worldPosition;
+        public quaternion rotation, worldRotation;
         public float spinAngle;
     }
+    
+    static readonly int matricesId = Shader.PropertyToID("_Matrices");
+    static MaterialPropertyBlock propertyBlock;
+    
+    NativeArray<FractalPart>[] parts;
+    NativeArray<float4x4>[] matrices;
+    
     FractalPart CreatePart(int childIndex) => new FractalPart
         { direction = _directions[childIndex], rotation = _rotations[childIndex]};
     
-    FractalPart[][] parts;
-    Matrix4x4[][] matrixs;
-
-    ComputeBuffer[] MatrixBuffers;
+    ComputeBuffer[] matricesBuffers;
     
     void OnEnable()
     {
-        parts = new FractalPart[depth][];
-        matrixs = new Matrix4x4[depth][];
-        MatrixBuffers = new ComputeBuffer[depth];
-        int stride = 16 * 4;
+        parts = new NativeArray<FractalPart>[depth];
+        matrices = new NativeArray<float4x4>[depth];
+        matricesBuffers = new ComputeBuffer[depth];
+
+        int stride = 16 * 4; 
         for (int i = 0, length = 1; i < parts.Length; i++,  length *= 5)
         {
-            parts[i] = new FractalPart[length]; 
-            matrixs[i] = new Matrix4x4[length];
-            MatrixBuffers[i] = new ComputeBuffer(length, stride);
+            parts[i] = new NativeArray<FractalPart>(length, Allocator.Persistent);
+            matrices[i] = new NativeArray<float4x4>(length, Allocator.Persistent);
+            matricesBuffers[i] = new ComputeBuffer(length, stride);
         }
 
         parts[0][0] =  CreatePart(0);
         for (int li = 1; li < parts.Length; li++)
         {
-            FractalPart[] levelParts = parts[li];
+            NativeArray<FractalPart> levelParts = parts[li];
             for (int fpi = 0; fpi < levelParts.Length; fpi+=5)
-            for (int ci = 0; ci < 5; ci++)
-                levelParts[fpi + ci] =  CreatePart(ci);
+                for (int ci = 0; ci < 5; ci++)
+                    levelParts[fpi + ci] =  CreatePart(ci);
         }
+        propertyBlock ??= new MaterialPropertyBlock();
     }
 
     void OnDisable()
     {
-        for (int i = 0; i < MatrixBuffers.Length; i++)
+        for (int i = 0; i < matricesBuffers.Length; i++)
         {
-            MatrixBuffers[i].Release();
-            parts = null;
-            matrixs = null;
-            MatrixBuffers = null;
-            propertyBlock ??= new MaterialPropertyBlock();
+            matricesBuffers[i].Release();
+            parts[i].Dispose();
+            matrices[i].Dispose();
         }
+        parts = null;
+        matrices = null;
+        matricesBuffers = null;
     }
 
     void OnValidate()
-    {   // hot reloads change supported
-        if (parts!= null&enabled)
+    {
+        if (parts != null && enabled)
         {
             OnDisable();
             OnEnable();
         }
     }
-
+    
     void Update()
     {
-        // Quaternion deltaRotation = Quaternion.Euler(0f, 22.5f * Time.deltaTime, 0f);
-        float spinAngleDelta = 22.5f * Time.deltaTime;
+        float spinAngleDelta = 0.125f * PI * Time.deltaTime;
         FractalPart rootPart = parts[0][0];
         rootPart.spinAngle += spinAngleDelta;
-        rootPart.worldRotation = transform.rotation * 
-            (rootPart.rotation * Quaternion.Euler(0f, rootPart.spinAngle, 0f));
-        rootPart.worldPosition = transform.position;
+        rootPart.worldRotation = mul(rootPart.rotation ,quaternion.RotateY(rootPart.spinAngle));
         
-        float objScale = transform.lossyScale.x;
         parts[0][0] = rootPart;
-        matrixs[0][0] = Matrix4x4.TRS
-            (rootPart.worldPosition, rootPart.worldRotation, objScale * Vector3.one);
+        matrices[0][0] = float4x4.TRS
+            (rootPart.worldPosition, rootPart.worldRotation, float3(1f));
 
-        float scale = objScale;
+        float scale = 1f;
+        JobHandle jHandle = default;
         for (int li = 1; li < parts.Length; li++)
         {
             scale *= 0.5f;
-            FractalPart[] parentParts = parts[li - 1];
-            FractalPart[] levelParts  = parts[li];
-            Matrix4x4[] levelMatrixs = matrixs[li];
-            for (int fpi = 0; fpi < levelParts.Length; fpi++)
-            {
-                FractalPart parent = parentParts[fpi / 5];
-                FractalPart part = levelParts[fpi];
-
-                part.spinAngle += spinAngleDelta;
-                // careful with the sequence of the Quaternion:
-                // Q1 * Q1 means Q2 Rotation first and Q1 after.
-                // child rotation first and parent after.
-                part.worldRotation = parent.worldRotation 
-                    * (part.rotation * Quaternion.Euler(0f, part.spinAngle, 0f));
-                part.worldPosition = parent.worldPosition + 
-                    parent.worldRotation * (1.25f * scale * part.direction);
-                levelParts[fpi] = part;
-                levelMatrixs[fpi] = Matrix4x4.TRS
-                    (rootPart.worldPosition, rootPart.worldRotation, scale * Vector3.one);
-            }
+            
+            jHandle = new UpdateFractalLevelJob
+            {   
+                spinAngleDelta = spinAngleDelta,
+                scale = scale,
+                parents = parts[li - 1],
+                parts = parts[li],
+                matrices = matrices[li]
+            }.Schedule(parts[li].Length, jHandle);
+            // Schedule(iteration count, sequence pattern)
+            // 1.innermost FOR loop count 2.sequential dependency between jobs
         }
-        var bounds = new Bounds(rootPart.worldPosition, 3f * objScale * Vector3.one);
-        for (int i = 0; i < MatrixBuffers.Length; i++)
+        // schedule first, invoke and execute after
+        jHandle.Complete();
+
+        var bounds = new Bounds(Vector3.zero, 3f * Vector3.one);
+        for (int i = 0; i < matricesBuffers.Length; i++)
         {
-            ComputeBuffer buffer = MatrixBuffers[i];
-            buffer.SetData(matrixs[i]);
-            propertyBlock.SetBuffer(matrixsID, buffer);
+            ComputeBuffer buffer = matricesBuffers[i];
+            buffer.SetData(matrices[i]);
+            propertyBlock.SetBuffer(matricesId, buffer);
             Graphics.DrawMeshInstancedProcedural
                 (mesh, 0, material, bounds, buffer.count, propertyBlock);
         }
