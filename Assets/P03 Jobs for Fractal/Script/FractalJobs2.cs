@@ -35,7 +35,7 @@ public class FractalJobs2 : MonoBehaviour
             part.worldRotation = 
                 mul(parent.worldRotation, mul(part.rotation, quaternion.RotateY(part.spinAngle)));
             part.worldPosition = parent.worldPosition +
-                mul(parent.worldRotation , 2.5f * scale * part.direction);
+                mul(parent.worldRotation , 1.25f * scale * part.direction);
                 
             parts[i] = part;
             

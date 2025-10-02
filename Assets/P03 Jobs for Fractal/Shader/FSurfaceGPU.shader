@@ -26,7 +26,8 @@ Shader "Custom/FSurface GPU"
 
 		void ConfigureSurface (Input input, inout SurfaceOutputStandard surface)
 		{
-			surface.Albedo = _BaseColor.rgb;
+			// surface.Albedo = _BaseColor.rgb;
+			surface.Albedo = saturate(input.worldPos * 0.5 + 0.375);
 			surface.Smoothness = _Smoothness;
 		}
 		ENDCG
