@@ -7,10 +7,11 @@ using Unity.VisualScripting;
 using UnityEngine;
 
 using static Unity.Mathematics.math;
+using float3x3 = Unity.Mathematics.float3x3;
 using float4x4 = Unity.Mathematics.float4x4;
 using quaternion = Unity.Mathematics.quaternion;
 
-public class FractalJobs : MonoBehaviour
+public class FractalJobs2 : MonoBehaviour
 {
     // FloatPrecision: Precision of sin() and cos(), lower precision rise speed of quaternion instructor
     // FloatMode.Fast: reorder mathematical operations to use MADD
@@ -24,7 +25,7 @@ public class FractalJobs : MonoBehaviour
         
         public NativeArray<FractalPart> parts;
         [ReadOnly] public NativeArray<FractalPart>  parents;
-        [WriteOnly]public NativeArray<float4x4>    matrices;
+        [WriteOnly]public NativeArray<float3x4>    matrices;
         public void Execute(int i)
         {   // replace the innermost loop of update()
             FractalPart parent = parents[i / 5];
@@ -34,11 +35,12 @@ public class FractalJobs : MonoBehaviour
             part.worldRotation = 
                 mul(parent.worldRotation, mul(part.rotation, quaternion.RotateY(part.spinAngle)));
             part.worldPosition = parent.worldPosition +
-                mul(parent.worldRotation , 1.5f * scale * part.direction);
+                mul(parent.worldRotation , 2.5f * scale * part.direction);
                 
             parts[i] = part;
-            matrices[i] = float4x4.TRS
-                (part.worldPosition, part.worldRotation, float3(scale));
+            
+            float3x3 r = float3x3(part.worldRotation) * scale;
+            matrices[i] = float3x4(r.c0, r.c1, r.c2, part.worldPosition);
         }
     }
 
@@ -65,7 +67,7 @@ public class FractalJobs : MonoBehaviour
     static MaterialPropertyBlock propertyBlock;
     
     NativeArray<FractalPart>[] parts;
-    NativeArray<float4x4>[] matrices;
+    NativeArray<float3x4>[] matrices;
     
     FractalPart CreatePart(int childIndex) => new FractalPart
         { direction = _directions[childIndex], rotation = _rotations[childIndex]};
@@ -75,14 +77,14 @@ public class FractalJobs : MonoBehaviour
     void OnEnable()
     {
         parts = new NativeArray<FractalPart>[depth];
-        matrices = new NativeArray<float4x4>[depth];
+        matrices = new NativeArray<float3x4>[depth];
         matricesBuffers = new ComputeBuffer[depth];
 
-        int stride = 16 * 4; 
+        int stride = 12 * 4; 
         for (int i = 0, length = 1; i < parts.Length; i++,  length *= 5)
         {
             parts[i] = new NativeArray<FractalPart>(length, Allocator.Persistent);
-            matrices[i] = new NativeArray<float4x4>(length, Allocator.Persistent);
+            matrices[i] = new NativeArray<float3x4>(length, Allocator.Persistent);
             matricesBuffers[i] = new ComputeBuffer(length, stride);
         }
 
@@ -127,10 +129,13 @@ public class FractalJobs : MonoBehaviour
         rootPart.worldRotation = mul(rootPart.rotation ,quaternion.RotateY(rootPart.spinAngle));
         
         parts[0][0] = rootPart;
-        matrices[0][0] = float4x4.TRS
-            (rootPart.worldPosition, rootPart.worldRotation, float3(1f));
+        
+        float objectScale = transform.lossyScale.x;
+        
+        float3x3 r = float3x3(rootPart.worldRotation) * objectScale;
+        matrices[0][0] = float3x4(r.c0, r.c1, r.c2, rootPart.worldPosition);
 
-        float scale = 1f;
+        float scale = objectScale;
         JobHandle jHandle = default;
         for (int li = 1; li < parts.Length; li++)
         {
@@ -143,7 +148,7 @@ public class FractalJobs : MonoBehaviour
                 parents = parts[li - 1],
                 parts = parts[li],
                 matrices = matrices[li]
-            }.Schedule(parts[li].Length, jHandle);
+            }.ScheduleParallel(parts[li].Length, 5,jHandle);
             // Schedule(iteration count, sequence pattern)
             // 1.innermost FOR loop count 2.sequential dependency between jobs
         }

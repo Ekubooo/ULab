@@ -13,7 +13,8 @@ Shader "Custom/FSurface GPU"
 		#pragma instancing_options assumeuniformscaling procedural:ConfigureProcedural
 		#pragma editor_sync_compilation
 		#pragma target 4.5
-		#include "FractalGPU.hlsl"
+		// #include "FractalGPU.hlsl"
+		#include "FractalGPU2.hlsl"
 
 		struct Input
 		{
